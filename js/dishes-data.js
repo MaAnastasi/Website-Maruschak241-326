@@ -1,104 +1,100 @@
-/// API URL для загрузки данных о блюдах
-const API_URL = "https://edu.std-900.ist.mospolytech.ru/labs/api/dishes";
+// API URL для загрузки данных о блюдах
+const DISHES_API_URL = "https://edu.std-900.ist.mospolytech.ru/labs/api/dishes";
+const ORDERS_API_URL = "https://edu.std-900.ist.mospolytech.ru/labs/api/orders";
 
-//API-КЛЮЧ 
+// API-КЛЮЧ
 const API_KEY = "cf9287df-c4f7-4c52-9b77-12f551818caf";
 
 // Массив для хранения загруженных блюд
 let dishes = [];
+let dishesLoaded = false;
 
-/**
- * Функция для загрузки данных о блюдах через API
- */
+// Функция для загрузки данных из API
 async function loadDishes() {
   try {
-    // Определяем URL API в зависимости от окружения
-    // Для локальной разработки используем один URL, для хостинга - другой
-    const API_URL = window.location.hostname.includes('netlify.app') || 
-                    window.location.hostname.includes('github.io')
-      ? 'https://edu.std-900.ist.mospolytech.ru/labs/api/dishes'  // Для Netlify/GitHub Pages
-      : 'http://lab7-api.std-900.ist.mospolytech.ru/api/dishes';   // Для хостинга МосПолитеха
+    console.log('Начинаем загрузку данных из API...');
     
-    console.log('Загрузка данных из API:', API_URL);
+    // Добавляем API ключ как query параметр
+    const url = `${DISHES_API_URL}?api_key=${API_KEY}`;
     
-    // Отправляем запрос к API
-    const response = await fetch(API_URL, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await fetch(url);
     
-    // Проверяем успешность запроса
+    console.log('Ответ получен. Статус:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`Ошибка HTTP: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Текст ошибки:', errorText);
+      throw new Error(`Ошибка HTTP: ${response.status} - ${response.statusText}`);
     }
     
-    // Получаем данные в формате JSON
     const data = await response.json();
-    console.log('Данные получены:', data.length, 'блюд');
+    console.log('Данные успешно получены. Количество блюд:', data.length);
     
     // Преобразуем данные из API в нужный формат
-    dishes = data.map(item => {
-      // Маппинг категорий из API в локальные названия
-      const categoryMap = {
-        'soup': 'soup',
-        'main-course': 'main',
-        'salad': 'salad',
-        'drink': 'drink',
-        'dessert': 'dessert'
-      };
-      
-      return {
-        keyword: item.keyword,
-        name: item.name,
-        price: item.price,
-        category: categoryMap[item.category] || item.category,
-        kind: item.kind,
-        count: item.count,
-        image: item.image
-      };
-    });
+    dishes = data.map(item => ({
+      keyword: item.keyword,
+      name: item.name,
+      price: item.price,
+      category: mapCategory(item.category),
+      kind: item.kind,
+      count: item.count,
+      image: item.image,
+      id: item.id
+    }));
     
-    console.log(`Успешно загружено ${dishes.length} блюд из API`);
+    console.log(`Загружено ${dishes.length} блюд из API`);
+    dishesLoaded = true;
     
-    // Инициализируем приложение после загрузки данных
-    if (typeof initializeApp === 'function') {
-      initializeApp();
-    } else {
-      console.error('Функция initializeApp не найдена');
-    }
+    // Генерируем событие о загрузке данных
+    document.dispatchEvent(new CustomEvent('dishesLoaded'));
     
     return dishes;
-    
   } catch (error) {
-    console.error('Ошибка при загрузке данных из API:', error);
+    console.error('Ошибка при загрузке данных:', error);
     
-    // Запасной вариант: используем статические данные
-    console.warn('Используем статические данные...');
+    // Используем fallback данные
     dishes = getFallbackDishes();
+    dishesLoaded = true;
     
-    // Инициализируем приложение с запасными данными
-    if (typeof initializeApp === 'function') {
-      initializeApp();
-    }
+    document.dispatchEvent(new CustomEvent('dishesLoaded'));
     
     return dishes;
   }
 }
 
-// Функция для преобразования категорий из API в локальные
+// Простая функция для преобразования категорий
 function mapCategory(apiCategory) {
-  const categoryMap = {
-    'soup': 'soup',
-    'main-course': 'main',
-    'salad': 'salad',
-    'drink': 'drink',
-    'dessert': 'dessert'
-  };
-  
-  return categoryMap[apiCategory] || apiCategory;
+  if (apiCategory === 'main-course') return 'main';
+  return apiCategory;
+}
+
+// Функция для отправки заказа
+async function submitOrder(orderData) {
+  try {
+    console.log('Отправка заказа на сервер:', orderData);
+    
+    const url = `${ORDERS_API_URL}?api_key=${API_KEY}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderData)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Ошибка HTTP: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return { success: true, data: result };
+    
+  } catch (error) {
+    console.error('Ошибка при отправке заказа:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 // Загружаем данные при загрузке страницы
