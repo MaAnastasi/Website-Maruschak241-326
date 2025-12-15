@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Мои заказы - BusinessLunch</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/orders.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  </head>
+  <body>
+    <header>
+      <div class="header-container">
+        <h1>BusinessLunch</h1>
+        <nav>
+          <ul>
+            <li><a href="index.html">О нас</a></li>
+            <li><a href="lunch.html">Собрать ланч</a></li>
+            <li><a href="checkout.html">Оформить заказ</a></li>
+            <li><a href="orders.html" id="active">Заказы</a></li>
+            <li><a href="index.html#contacts">Контакты</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="orders-section">
+        <h2>Мои заказы</h2>
+        
+        <div class="orders-container">
+          <div id="orders-list" class="orders-list">
+            <!-- Заказы будут загружены через JavaScript -->
+            <div class="loading-message">
+              <p>Загрузка ваших заказов...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Модальное окно для просмотра деталей заказа -->
+    <div id="order-details-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Детали заказа <span id="order-number"></span></h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="order-details-content">
+            <!-- Детали заказа будут загружены через JavaScript -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-ok">ОК</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно для редактирования заказа -->
+    <div id="edit-order-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Редактирование заказа <span id="edit-order-number"></span></h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="edit-order-form">
+            <div class="form-group">
+              <label for="edit-full_name">Имя:</label>
+              <input type="text" id="edit-full_name" name="full_name" required />
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-email">Email:</label>
+              <input type="email" id="edit-email" name="email" required />
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-phone">Телефон:</label>
+              <input type="tel" id="edit-phone" name="phone" required />
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-delivery_address">Адрес доставки:</label>
+              <input type="text" id="edit-delivery_address" name="delivery_address" required />
+            </div>
+            
+            <div class="form-group">
+              <label>Тип доставки:</label>
+              <div class="radio-group">
+                <div>
+                  <input type="radio" id="edit-delivery_asap" name="delivery_type" value="now" />
+                  <label for="edit-delivery_asap">Как можно скорее</label>
+                </div>
+                <div>
+                  <input type="radio" id="edit-delivery_by_time" name="delivery_type" value="by_time" />
+                  <label for="edit-delivery_by_time">Ко времени</label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-delivery_time">Время доставки:</label>
+              <input type="time" id="edit-delivery_time" name="delivery_time" min="07:00" max="23:00" step="300" />
+              <small>Доступно с 7:00 до 23:00 с шагом 5 минут</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-comment">Комментарий:</label>
+              <textarea id="edit-comment" name="comment" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="edit-subscribe" name="subscribe" />
+              <label for="edit-subscribe">Подписаться на рассылку</label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel">Отмена</button>
+          <button type="submit" form="edit-order-form" class="btn-save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно для подтверждения удаления -->
+    <div id="delete-order-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Подтверждение удаления</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Вы уверены, что хотите удалить заказ <span id="delete-order-number"></span>?</p>
+          <p class="warning-text">Это действие нельзя отменить.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel">Отмена</button>
+          <button class="btn-confirm-delete">Да, удалить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notification" class="notification hidden"></div>
+
+    <footer id="contacts">
+      <div class="footer-container">
+        <h2>Контакты</h2>
+        <p>Адрес: Москва</p>
+        <p>Телефон: <a href="tel:+7-000-000-00-00">+7-000-000-00-00</a></p>
+        <p>
+          Email:
+          <a href="mailto:info@businesslunch.ru">info@businesslunch.ru</a>
+        </p>
+        <p>Время работы: Пн-Пт с 11:00 до 22:00</p>
+      </div>
+    </footer>
+
+    <script src="js/dishes-data.js" defer></script>
+    <script src="js/orders.js" defer></script>
+  </body>
+</html>
