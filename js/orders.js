@@ -42,16 +42,21 @@ function showNotification(message, type = 'info') {
 async function loadAllDishes() {
     try {
         const url = `${DISHES_API_URL}?api_key=${API_KEY}`;
+        console.log('Загружаем блюда с URL:', url);
+        
         const response = await fetch(url);
+        console.log('Ответ от сервера получен. Статус:', response.status);
         
         if (!response.ok) {
             throw new Error(`Ошибка HTTP: ${response.status}`);
         }
         
         allDishes = await response.json();
+        console.log(`Блюда успешно загружены. Количество: ${allDishes.length}`);
         return allDishes;
     } catch (error) {
         console.error('Ошибка при загрузке блюд:', error);
+        showNotification('Ошибка при загрузке меню', 'error');
         return [];
     }
 }
@@ -62,10 +67,14 @@ async function loadOrders() {
     
     try {
         const url = `${ORDERS_API_URL}?api_key=${API_KEY}`;
+        console.log('Загружаем заказы с URL:', url);
+        
         const response = await fetch(url);
+        console.log('Ответ от сервера получен. Статус:', response.status);
         
         if (!response.ok) {
             if (response.status === 401) {
+                console.error('Ошибка аутентификации');
                 showNotification('Для просмотра заказов необходимо авторизоваться', 'error');
                 ordersList.innerHTML = `
                     <div class="error-message">
@@ -75,15 +84,19 @@ async function loadOrders() {
                 `;
                 return;
             }
+            const errorText = await response.text();
+            console.error('Ошибка при загрузке заказов:', response.status, errorText);
             throw new Error(`Ошибка HTTP: ${response.status}`);
         }
         
         allOrders = await response.json();
+        console.log('Заказы успешно загружены:', allOrders);
         
         // Сортировка по дате (новые первыми)
         allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
         if (allOrders.length === 0) {
+            console.log('Нет заказов для отображения');
             ordersList.innerHTML = `
                 <div class="empty-orders-message">
                     <p>У вас пока нет заказов.</p>
@@ -93,10 +106,11 @@ async function loadOrders() {
             return;
         }
         
+        console.log(`Отображаем ${allOrders.length} заказов`);
         renderOrders(allOrders);
         
     } catch (error) {
-        console.error('Ошибка при загрузке заказов:', error);
+        console.error('Критическая ошибка при загрузке заказов:', error);
         ordersList.innerHTML = `
             <div class="error-message">
                 <p>Ошибка при загрузке заказов: ${error.message}</p>
@@ -378,6 +392,8 @@ function closeModal(modalId) {
 async function editOrder(formData) {
     try {
         const url = `${ORDERS_API_URL}/${currentOrderId}?api_key=${API_KEY}`;
+        console.log('Отправляем запрос PUT на:', url);
+        console.log('Данные формы:', formData);
         
         const response = await fetch(url, {
             method: 'PUT',
@@ -387,12 +403,16 @@ async function editOrder(formData) {
             body: JSON.stringify(formData)
         });
         
+        console.log('Ответ от сервера:', response.status);
+        
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Ошибка на сервере:', errorData);
             throw new Error(errorData.error || `Ошибка HTTP: ${response.status}`);
         }
         
         const updatedOrder = await response.json();
+        console.log('Заказ успешно обновлен:', updatedOrder);
         
         // Обновляем заказ в списке
         const index = allOrders.findIndex(o => o.id === currentOrderId);
@@ -414,21 +434,38 @@ async function editOrder(formData) {
 async function deleteOrder() {
     try {
         const url = `${ORDERS_API_URL}/${currentOrderId}?api_key=${API_KEY}`;
+        console.log('Отправляем запрос DELETE на:', url);
         
         const response = await fetch(url, {
             method: 'DELETE'
         });
         
+        console.log('Ответ от сервера:', response.status);
+        
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Ошибка на сервере:', errorData);
             throw new Error(errorData.error || `Ошибка HTTP: ${response.status}`);
         }
+        
+        console.log('Заказ успешно удален');
         
         // Удаляем заказ из списка
         allOrders = allOrders.filter(o => o.id !== currentOrderId);
         
         showNotification('Заказ успешно удалён', 'success');
-        renderOrders(allOrders);
+        
+        if (allOrders.length === 0) {
+            const ordersList = document.getElementById('orders-list');
+            ordersList.innerHTML = `
+                <div class="empty-orders-message">
+                    <p>У вас пока нет заказов.</p>
+                    <p>Сделайте ваш первый заказ на странице <a href="checkout.html">оформления заказа</a>.</p>
+                </div>
+            `;
+        } else {
+            renderOrders(allOrders);
+        }
         closeModal('delete-order-modal');
         
     } catch (error) {
@@ -439,108 +476,121 @@ async function deleteOrder() {
 
 // Инициализация страницы
 async function initializeOrdersPage() {
-    // Загружаем блюда
-    await loadAllDishes();
-    
-    // Загружаем заказы
-    await loadOrders();
-    
-    // Настраиваем обработчики событий для модальных окон
-    setupModalEventListeners();
-    
-    // Настраиваем обработчики для кнопок закрытия
-    document.querySelectorAll('.close-modal').forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        });
-    });
-    
-    // Обработчик кнопки OK в деталях заказа
-    const btnOk = document.querySelector('#order-details-modal .btn-ok');
-    if (btnOk) {
-        btnOk.addEventListener('click', () => {
-            closeModal('order-details-modal');
-        });
-    }
-    
-    // Обработчик кнопки Отмена в редактировании
-    const btnCancelEdit = document.querySelector('#edit-order-modal .btn-cancel');
-    if (btnCancelEdit) {
-        btnCancelEdit.addEventListener('click', () => {
-            closeModal('edit-order-modal');
-        });
-    }
-    
-    // Обработчик кнопки Отмена в удалении
-    const btnCancelDelete = document.querySelector('#delete-order-modal .btn-cancel');
-    if (btnCancelDelete) {
-        btnCancelDelete.addEventListener('click', () => {
-            closeModal('delete-order-modal');
-        });
-    }
-    
-    // Обработчик подтверждения удаления
-    const btnConfirmDelete = document.querySelector('#delete-order-modal .btn-confirm-delete');
-    if (btnConfirmDelete) {
-        btnConfirmDelete.addEventListener('click', deleteOrder);
-    }
-    
-    // Обработчик формы редактирования
-    const editForm = document.getElementById('edit-order-form');
-    if (editForm) {
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                full_name: document.getElementById('edit-full_name').value,
-                email: document.getElementById('edit-email').value,
-                phone: document.getElementById('edit-phone').value,
-                delivery_address: document.getElementById('edit-delivery_address').value,
-                delivery_type: document.querySelector('input[name="delivery_type"]:checked').value,
-                comment: document.getElementById('edit-comment').value,
-                subscribe: document.getElementById('edit-subscribe').checked
-            };
-            
-            if (formData.delivery_type === 'by_time') {
-                const deliveryTime = document.getElementById('edit-delivery_time').value;
-                if (!deliveryTime) {
-                    showNotification('Пожалуйста, укажите время доставки', 'error');
-                    return;
+    try {
+        console.log('Начинаем инициализацию страницы заказов...');
+        
+        // Загружаем блюда
+        console.log('Загружаем блюда...');
+        await loadAllDishes();
+        console.log(`Загружено ${allDishes.length} блюд`);
+        
+        // Загружаем заказы
+        console.log('Загружаем заказы...');
+        await loadOrders();
+        console.log(`Загружено ${allOrders.length} заказов`);
+        
+        // Настраиваем обработчики событий для модальных окон
+        setupModalEventListeners();
+        
+        // Настраиваем обработчики для кнопок закрытия
+        document.querySelectorAll('.close-modal').forEach(button => {
+            button.addEventListener('click', function() {
+                const modal = this.closest('.modal');
+                if (modal) {
+                    modal.classList.add('hidden');
                 }
-                formData.delivery_time = deliveryTime;
-            }
-            
-            await editOrder(formData);
+            });
         });
+        
+        // Обработчик кнопки OK в деталях заказа
+        const btnOk = document.querySelector('#order-details-modal .btn-ok');
+        if (btnOk) {
+            btnOk.addEventListener('click', () => {
+                closeModal('order-details-modal');
+            });
+        }
+        
+        // Обработчик кнопки Отмена в редактировании
+        const btnCancelEdit = document.querySelector('#edit-order-modal .btn-cancel');
+        if (btnCancelEdit) {
+            btnCancelEdit.addEventListener('click', () => {
+                closeModal('edit-order-modal');
+            });
+        }
+        
+        // Обработчик кнопки Отмена в удалении
+        const btnCancelDelete = document.querySelector('#delete-order-modal .btn-cancel');
+        if (btnCancelDelete) {
+            btnCancelDelete.addEventListener('click', () => {
+                closeModal('delete-order-modal');
+            });
+        }
+        
+        // Обработчик подтверждения удаления
+        const btnConfirmDelete = document.querySelector('#delete-order-modal .btn-confirm-delete');
+        if (btnConfirmDelete) {
+            btnConfirmDelete.addEventListener('click', deleteOrder);
+        }
+        
+        // Обработчик формы редактирования
+        const editForm = document.getElementById('edit-order-form');
+        if (editForm) {
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = {
+                    full_name: document.getElementById('edit-full_name').value,
+                    email: document.getElementById('edit-email').value,
+                    phone: document.getElementById('edit-phone').value,
+                    delivery_address: document.getElementById('edit-delivery_address').value,
+                    delivery_type: document.querySelector('input[name="delivery_type"]:checked').value,
+                    comment: document.getElementById('edit-comment').value,
+                    subscribe: document.getElementById('edit-subscribe').checked ? 1 : 0
+                };
+                
+                if (formData.delivery_type === 'by_time') {
+                    const deliveryTime = document.getElementById('edit-delivery_time').value;
+                    if (!deliveryTime) {
+                        showNotification('Пожалуйста, укажите время доставки', 'error');
+                        return;
+                    }
+                    formData.delivery_time = deliveryTime;
+                }
+                
+                await editOrder(formData);
+            });
+        }
+        
+        // Настраиваем переключение типа доставки в форме редактирования
+        const deliveryTypeRadios = document.querySelectorAll('#edit-order-modal input[name="delivery_type"]');
+        deliveryTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const deliveryTimeInput = document.getElementById('edit-delivery_time');
+                if (this.value === 'by_time') {
+                    deliveryTimeInput.disabled = false;
+                    deliveryTimeInput.required = true;
+                } else {
+                    deliveryTimeInput.disabled = true;
+                    deliveryTimeInput.required = false;
+                    deliveryTimeInput.value = '';
+                }
+            });
+        });
+        
+        // Закрытие модальных окон по клику вне окна
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+        
+        console.log('Инициализация страницы завершена успешно');
+    } catch (error) {
+        console.error('Ошибка при инициализации страницы:', error);
+        showNotification(`Критическая ошибка: ${error.message}`, 'error');
     }
-    
-    // Настраиваем переключение типа доставки в форме редактирования
-    const deliveryTypeRadios = document.querySelectorAll('input[name="delivery_type"]');
-    deliveryTypeRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            const deliveryTimeInput = document.getElementById('edit-delivery_time');
-            if (this.value === 'by_time') {
-                deliveryTimeInput.disabled = false;
-                deliveryTimeInput.required = true;
-            } else {
-                deliveryTimeInput.disabled = true;
-                deliveryTimeInput.required = false;
-                deliveryTimeInput.value = '';
-            }
-        });
-    });
-    
-    // Закрытие модальных окон по клику вне окна
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.classList.add('hidden');
-            }
-        });
-    });
 }
 
 function setupModalEventListeners() {
