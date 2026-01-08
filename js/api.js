@@ -49,3 +49,163 @@ async function fetchTutors() {
         return [];
     }
 }
+
+/**
+ * Fetches orders from the API.
+ * @returns {Promise<any>}
+ */
+async function fetchOrders() {
+    const url = new URL(`${API_BASE_URL}/api/orders`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Could not fetch orders:", error);
+        if (typeof showNotification === 'function') {
+            showNotification(`Не удалось загрузить заявки: ${error.message}`, 'danger');
+        }
+        return [];
+    }
+}
+
+/**
+ * Deletes an order by its ID.
+ * @param {number} orderId
+ * @returns {Promise<any>}
+ */
+async function deleteOrder(orderId) {
+    const url = new URL(`${API_BASE_URL}/api/orders/${orderId}`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url, { method: 'DELETE' });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Could not delete order ${orderId}:`, error);
+        if (typeof showNotification === 'function') {
+            showNotification(`Не удалось удалить заявку: ${error.message}`, 'danger');
+        }
+        throw error; // Re-throw to handle it in the UI logic
+    }
+}
+
+/**
+ * Updates an order by its ID.
+ * @param {number} orderId
+ * @param {object} orderData
+ * @returns {Promise<any>}
+ */
+async function updateOrder(orderId, orderData) {
+    const url = new URL(`${API_BASE_URL}/api/orders/${orderId}`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Could not update order ${orderId}:`, error);
+        if (typeof showNotification === 'function') {
+            showNotification(`Не удалось обновить заявку: ${error.message}`, 'danger');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Creates a new order.
+ * @param {object} orderData
+ * @returns {Promise<any>}
+ */
+async function createOrder(orderData) {
+    const url = new URL(`${API_BASE_URL}/api/orders`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Could not create order:', error);
+        if (typeof showNotification === 'function') {
+            showNotification(`Не удалось создать заявку: ${error.message}`, 'danger');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Fetches a single course by its ID.
+ * @param {number} courseId
+ * @returns {Promise<any>}
+ */
+async function fetchCourseById(courseId) {
+    const url = new URL(`${API_BASE_URL}/api/courses/${courseId}`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Could not fetch course ${courseId}:`, error);
+        // This function is not actively used, so no user notification is needed yet.
+        throw error;
+    }
+}
+
+/**
+ * Fetches a single tutor by their ID.
+ * @param {number} tutorId
+ * @returns {Promise<any>}
+ */
+async function fetchTutorById(tutorId) {
+    const url = new URL(`${API_BASE_URL}/api/tutors/${tutorId}`);
+    url.searchParams.append('api_key', API_KEY);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Could not fetch tutor ${tutorId}:`, error);
+        // This function is not actively used, so no user notification is needed yet.
+        throw error;
+    }
+}
+
+
